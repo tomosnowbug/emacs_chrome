@@ -350,8 +350,8 @@ If `edit-server-verbose' is non-nil, then STRING is also echoed to the message l
       (add-hook 'kill-buffer-hook 'edit-server-abort* nil t)
       (buffer-enable-undo)
       (set (make-local-variable 'edit-server-proc) proc)
-      (set (make-local-variable 'edit-server-frame)
-	   (edit-server-create-frame buffer))
+      (if (not (make-local-variable 'edit-server-frame))
+	  (set 'edit-server-frame (edit-server-create-frame buffer)))
       (run-hooks 'edit-server-start-hook))))
 
 (defun edit-server-send-response (proc &optional body close progress)
