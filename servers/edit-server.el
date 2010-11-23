@@ -335,11 +335,9 @@ If `edit-server-verbose' is non-nil, then STRING is also echoed to the message l
   "Create an edit buffer, place content in it and save the network
   process for the final call back. If the optional NAME is set then it
   will fetch a pre-existing buffer instead of creating a new one"
-  (let ((buffer (if name
-		    (get-buffer name)
-		  (generate-new-buffer (if edit-server-url
-					   edit-server-url
-					 edit-server-edit-buffer-name)))))
+  (let ((buffer (or (get-buffer name)
+		    (generate-new-buffer (or edit-server-url
+					     edit-server-edit-buffer-name)))))
     (with-current-buffer buffer
       (and (fboundp 'set-buffer-multibyte)
            (set-buffer-multibyte t))) ; djb
@@ -350,8 +348,8 @@ If `edit-server-verbose' is non-nil, then STRING is also echoed to the message l
       (add-hook 'kill-buffer-hook 'edit-server-abort* nil t)
       (buffer-enable-undo)
       (set (make-local-variable 'edit-server-proc) proc)
-      (if (not (make-local-variable 'edit-server-frame))
-	  (set 'edit-server-frame (edit-server-create-frame buffer)))
+      (if (not (local-variable-p 'edit-server-frame))
+	  (set (make-local-variable 'edit-server-frame (edit-server-create-frame buffer))))
       (run-hooks 'edit-server-start-hook))))
 
 (defun edit-server-send-response (proc &optional body close progress)
