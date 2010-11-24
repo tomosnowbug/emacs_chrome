@@ -29,6 +29,11 @@ consistent:
 This tells both emacs and vim to use actual tab characters, and to
 display tabs as 2 columns wide.
 
+You can configure your local git options for the repository to display
+the diffs with a tab width of 2 by executing the following:
+
+git config --local --add core.pager "less -FXRS -x2"
+
 History
 =======
 
