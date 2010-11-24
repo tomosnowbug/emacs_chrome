@@ -1,4 +1,4 @@
-// -*- tab-width:2; indent-tabs-mode:t -*- vim: set noet ts=2:
+// -*- tab-width:2; indent-tabs-mode:t; c-basic-offset:2 -*- vim: set noet ts=2:
 /*
  * xmlcomms.js
  *
@@ -17,7 +17,7 @@ function getEditUrl()
 {
 	var port = localStorage["edit_server_port"];
 	if (!port) {
-	port = 9292;
+		port = 9292;
 	}
 	return "http://127.0.0.1:" +	port + "/";
 }
@@ -32,11 +32,11 @@ function updateUserFeedback(string, colour)
 	if (colour == null) {
 		chrome.browserAction.setIcon({path:"emacs23-16x16.png"});
 	} else if (colour == "green") {
-	chrome.browserAction.setIcon({path:"emacs23-16x16-green.png"});
+		chrome.browserAction.setIcon({path:"emacs23-16x16-green.png"});
 	} else if (colour == "red") {
-	chrome.browserAction.setIcon({path:"emacs23-16x16-red.png"});
+		chrome.browserAction.setIcon({path:"emacs23-16x16-red.png"});
 	} else if (colour == "darkblue") {
-	chrome.browserAction.setIcon({path:"emacs23-16x16-darker.png"});
+		chrome.browserAction.setIcon({path:"emacs23-16x16-darker.png"});
 	} else {
 		chrome.browserAction.setIcon({path:"emacs23-16x16.png"});
 	}
@@ -83,30 +83,30 @@ function handleContentMessages(msg, tab_port)
 	
 	xhr.onreadystatechange = function() {
 		console.log("State change:"+ xhr.readyState + " status:"+xhr.status);
-	// readyState 4=HTTP response complete
+		// readyState 4=HTTP response complete
 		if(xhr.readyState == 4) {
-		if (xhr.status == 200) {
+			if (xhr.status == 200) {
 		
-		var update_msg = {
-			msg: "update",
-			text: xhr.responseText,
-			id: id
-		};
+				var update_msg = {
+					msg: "update",
+					text: xhr.responseText,
+					id: id
+				};
 
-		updateUserFeedback("Successful edit of "+msg.title);
-		tab_port.postMessage(update_msg);
+				updateUserFeedback("Successful edit of "+msg.title);
+				tab_port.postMessage(update_msg);
 
 				msg.text = xhr.responseText;
 				msg.file = xhr.getResponseHeader("x-file");
 				if(xhr.getResponseHeader("x-open") == "true") {
 					handleContentMessages(msg, tab_port);
 				}
-		} else if (xhr.status == 0) {
-		// Is the edit server actually running?
-		updateUserFeedback("Error: is edit server running?", "red");
-		} else {
-		updateUserFeedback("Un-handled response: "+xhr.status, "red"); 
-		}
+			} else if (xhr.status == 0) {
+				// Is the edit server actually running?
+				updateUserFeedback("Error: is edit server running?", "red");
+			} else {
+				updateUserFeedback("Un-handled response: "+xhr.status, "red"); 
+			}
 		}
 	}
 
@@ -116,7 +116,9 @@ function handleContentMessages(msg, tab_port)
 	xhr.setRequestHeader("Content-type", "text/plain");
 	xhr.setRequestHeader("x-url", tab_port.tab.url);
 	xhr.setRequestHeader("x-id", id);
-	xhr.setRequestHeader("x-file", file);
+	if (typeof(file) != "undefined") {
+		xhr.setRequestHeader("x-file", file);
+	}
 	xhr.send(text);
 }
 
@@ -129,17 +131,17 @@ function handleTestMessages(msg, tab_port)
 	var xhr = new XMLHttpRequest();
 	xhr.open("GET", url, true);
 	xhr.onreadystatechange = function() {
-	console.log("State change:"+ xhr.readyState + " status:"+xhr.status);
-	// readyState 4=HTTP response complete
-	if(xhr.readyState == 4) {
-		if (xhr.status == 200) {
-		tab_port.postMessage({msg: "test_result", text: xhr.responseText});
-		} else if (xhr.status == 0) {
-		tab_port.postMessage({msg: "test_result", text: "Edit Server Test failed: is it running?"});
-		} else {
-		tab_port.postMessage({msg: "test_result", text: "Un-handled response: "+xhr.status}); 
+		console.log("State change:"+ xhr.readyState + " status:"+xhr.status);
+  	// readyState 4=HTTP response complete
+		if(xhr.readyState == 4) {
+			if (xhr.status == 200) {
+				tab_port.postMessage({msg: "test_result", text: xhr.responseText});
+			} else if (xhr.status == 0) {
+				tab_port.postMessage({msg: "test_result", text: "Edit Server Test failed: is it running?"});
+			} else {
+				tab_port.postMessage({msg: "test_result", text: "Un-handled response: "+xhr.status}); 
+			}
 		}
-	}
 	}
 	xhr.send();
 }
@@ -175,21 +177,21 @@ function localMessageHandler(port)
 {
 	port.onMessage.addListener(function(msg, port) {
 		if (msg.msg == "config") {
-		handleConfigMessages(msg, port);
-	} else if (msg.msg == "edit") {
-		handleContentMessages(msg, port);
-	} else if (msg.msg == "test") {
-		handleTestMessages(msg, port);
-	} else if (msg.msg == "error") {
-		updateUserFeedback(msg.text, "red");
-	} else if (msg.msg == "focus") {
-		if (msg.id === null) {
-		updateUserFeedback("Awaiting edit request: no focus", "darkblue");
-		} else {
-		updateUserFeedback("Awaiting edit request: in focus");
+			handleConfigMessages(msg, port);
+		} else if (msg.msg == "edit") {
+			handleContentMessages(msg, port);
+		} else if (msg.msg == "test") {
+			handleTestMessages(msg, port);
+		} else if (msg.msg == "error") {
+			updateUserFeedback(msg.text, "red");
+		} else if (msg.msg == "focus") {
+			if (msg.id === null) {
+				updateUserFeedback("Awaiting edit request: no focus", "darkblue");
+			} else {
+				updateUserFeedback("Awaiting edit request: in focus");
+			}
 		}
-	}
-	});
+ });
 }
 
 // Hook up whenever someone connects to the extension comms port
