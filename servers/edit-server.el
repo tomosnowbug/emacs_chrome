@@ -309,18 +309,6 @@ If `edit-server-verbose' is non-nil, then STRING is also echoed to the message l
 				(setq edit-server-received 0)
 				(setq edit-server-phase 'wait)))))
 
-(defun edit-server-create-frame(buffer)
-	"Create a frame for the edit server, returns frame or 'nil"
-	(if edit-server-new-frame
-			(let ((new-frame
-						 (if (featurep 'aquamacs)
-								 (make-frame edit-server-new-frame-alist)
-							 (make-frame-on-display (getenv "DISPLAY")
-																edit-server-new-frame-alist))))
-				(if (not edit-server-new-frame-mode-line)
-						(setq mode-line-format nil)))
-		nil))
-
 (defun edit-server-display-buffer-and-frame(buffer &optional frame)
 	"Switch to the buffer we are editing.
 Optional second argument FRAME specifies a specific frame to raise"
@@ -336,6 +324,25 @@ Optional second argument FRAME specifies a specific frame to raise"
 				(set-window-buffer (frame-selected-window frame) buffer))
     (pop-to-buffer buffer)))
 
+(defun edit-server-fetch-frame(buffer)
+	"Fetch or create a working frame (potentially creating it) for
+	BUFFER. The frame is kept in a local variable edit-server-frame.
+Returns frame or 'nil"
+	(with-current-buffer buffer
+		; set mode line either way
+		(if (not edit-server-new-frame-mode-line)
+				(setq mode-line-format nil))
+		; maybe create a frame if we don't already have one
+		(if (and (local-variable-p 'edit-server-frame) (frame-live-p edit-server-frame))
+				edit-server-frame
+			(if edit-server-new-frame
+					(set (make-local-variable 'edit-server-frame)
+							 (if (featurep 'aquamacs)
+									 (make-frame edit-server-new-frame-alist)
+								 (make-frame-on-display (getenv "DISPLAY")
+																					edit-server-new-frame-alist)))
+				nil))))
+
 (defun edit-server-switchto-edit-buffer(proc &optional name)
   "Create an edit buffer, place content in it and save the network
   process for the final call back. If the optional NAME is set then it
@@ -343,21 +350,20 @@ Optional second argument FRAME specifies a specific frame to raise"
 	(edit-server-log proc "Starting an edit with: %s" (or name "no buffer name"))
   (let ((buffer (if name (get-buffer name))))
 		(if (not buffer)
-				(generate-new-buffer (or edit-server-url edit-server-edit-buffer-name)))
+				(setq buffer
+							(generate-new-buffer (or edit-server-url edit-server-edit-buffer-name))))
     (with-current-buffer buffer
       (and (fboundp 'set-buffer-multibyte)
            (set-buffer-multibyte t)))
 		(copy-to-buffer buffer (point-min) (point-max))
 		(with-current-buffer buffer
-			(not-modified)
+			(set-buffer-modified-p 'nil)
 			(edit-server-text-mode)
       (add-hook 'kill-buffer-hook 'edit-server-abort* nil t)
       (buffer-enable-undo)
       (set (make-local-variable 'edit-server-proc) proc)
-      (if (not (local-variable-p 'edit-server-frame))
-					(set (make-local-variable 'edit-server-frame)
-							 (edit-server-create-frame buffer)))
-			(edit-server-display-buffer-and-frame buffer edit-server-frame)
+			(edit-server-display-buffer-and-frame buffer
+																						(edit-server-fetch-frame buffer))
       (run-hooks 'edit-server-start-hook))))
 
 (defun edit-server-send-response (proc &optional body close buffer)
