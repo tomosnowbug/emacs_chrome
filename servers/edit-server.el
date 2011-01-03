@@ -149,11 +149,14 @@ Depending on the character encoding, may be different from the buffer length.")
 rebound to more functions that can deal with the response to the
 edit-server request.
 
-Any of the following keys will close the buffer and send the text
-to the HTTP client: C-x #, C-x C-s, C-c C-c.
+C-x C-s will save progress by sending the text to the browser and
+trigger a new edit session to continue editing.
+
+C-x # or  C-c C-c will close the buffer and send the text
+to the HTTP client: C-x #, C-c C-c.
 
 If any of the above isused with a prefix argument, the
-unmodified text is sent back instead.
+unmodified text is sent back instead as will C-x C-c.
 "
   :group 'edit-server)
 (define-key edit-server-text-mode-map (kbd "C-x #") 'edit-server-done)
@@ -348,14 +351,22 @@ Returns frame or 'nil"
   process for the final call back. If the optional NAME is set then it
   will fetch a pre-existing buffer instead of creating a new one"
 	(edit-server-log proc "Starting an edit with: %s" (or name "no buffer name"))
-  (let ((buffer (if name (get-buffer name))))
+  (let ((buffer (if name (get-buffer name) 'nil))
+				(keep-current-contents 't))
 		(if (not buffer)
-				(setq buffer
-							(generate-new-buffer (or edit-server-url edit-server-edit-buffer-name))))
+				(progn
+					(setq buffer (generate-new-buffer (or edit-server-url edit-server-edit-buffer-name))
+								keep-current-contents 'nil)
+					(edit-server-log proc "Created a new buffer: %s" buffer)))
     (with-current-buffer buffer
       (and (fboundp 'set-buffer-multibyte)
            (set-buffer-multibyte t)))
-		(copy-to-buffer buffer (point-min) (point-max))
+		(if keep-current-contents
+				;; restore formats (we did a format-encode-region when we sent
+				;; the results)
+				(dolist (format buffer-file-format)
+					(format-decode-region (point-min) (point-max) format))
+			(copy-to-buffer buffer (point-min) (point-max)))
 		(with-current-buffer buffer
 			(set-buffer-modified-p 'nil)
 			(edit-server-text-mode)
@@ -439,22 +450,17 @@ When called interactively, use prefix arg to abort editing."
 					(widen)
 					(buffer-disable-undo)
 					;; ensure any format encoding is done (like longlines)
-					(dolist (format buffer-file-format)
+ 					(dolist (format buffer-file-format)
             (format-encode-region (point-min) (point-max) format))
           ;; send back
           (run-hooks 'edit-server-done-hook)
           (edit-server-send-response
-					 edit-server-proc t nil (if nokill buffer))
-          ;; restore formats (only useful if we keep the buffer)
-          (dolist (format buffer-file-format)
-            (format-decode-region (point-min) (point-max) format))
-          (buffer-enable-undo)))
+					 edit-server-proc t nil (if nokill buffer))))
       ;; delete-frame may change the current buffer
+			(edit-server-log proc "Killing frames and buffers.")
+			(if edit-server-frame (delete-frame edit-server-frame))
       (unless nokill
-				(progn
-		       (edit-server-log proc "Killing frames and buffers.")
-		       (if edit-server-frame (delete-frame edit-server-frame))
-		       (kill-buffer buffer)))
+				(kill-buffer buffer))
       (edit-server-kill-client proc))))
 
 (defun edit-server-save-progress ()
