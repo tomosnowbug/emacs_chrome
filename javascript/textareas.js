@@ -191,6 +191,7 @@ function tagTextArea(text)
 function updateTextArea(id, content) {
     var tracker = getTextAreaTracker(id);
     if (tracker) {
+	$("textArea[edit_id=" + tracker.edit_id + "]").removeAttr("disabled");
 	tracker.setContent(content);
 	var orig = $(tracker.text).css('background-color');
 	$(tracker.text).css({'background-color': 'yellow'});
@@ -278,6 +279,8 @@ function editTextArea(event) {
     var tracker = getTextAreaTracker(edit_id);
     if (tracker) {
         sendTextArea(tracker);
+		console.log(" ***** HIT");
+		$("textArea[edit_id=" + tracker.edit_id + "]").attr("disabled", "disabled");
     } else {
         console.log("No text area found");
     }
